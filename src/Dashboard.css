@@ -1,0 +1,75 @@
+/* Dashboard.css */
+.dashboard-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  max-width: 500px;
+}
+
+.dashboard-card h2 {
+  margin-bottom: 15px;
+}
+
+.back-button {
+  background-color: #4A00E0;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background-color: #3A0CA3;
+}
+
+.classified-documents-table {
+  margin-top: 40px;
+}
+
+.classified-documents-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.classified-documents-table th, .classified-documents-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.classified-documents-table th {
+  background-color: #f2f2f2;
+  text-align: left;
+}
+
+.view-button {
+  background-color: #4A00E0;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.view-button:hover {
+  background-color: #3A0CA3;
+}
