@@ -11,16 +11,28 @@ const Dashboard = ({ files, results, onBack }) => {
   const [classificationResults, setClassificationResults] = useState(results);
 
   useEffect(() => {
-    fetch('http://localhost:3001/files')
-      .then(response => response.json())
-      .then(data => {
-        setFileData(data); // Set file data
-  
-        // Extract classification results from the fetched data
-        const results = data.map(file => file.classificationResult || 'Not Classified Yet');
-        setClassificationResults(results); // Set the classification results
-      })
-      .catch(error => console.error('Error fetching files:', error));
+    // Define the function to fetch data
+    const fetchData = () => {
+      fetch('http://localhost:3001/files')
+        .then(response => response.json())
+        .then(data => {
+          setFileData(data); // Set file data
+          
+          // Extract classification results from the fetched data
+          const results = data.map(file => file.classificationResult || 'Not Classified Yet');
+          setClassificationResults(results); // Set the classification results
+        })
+        .catch(error => console.error('Error fetching files:', error));
+    };
+
+    // Fetch data initially
+    fetchData();
+
+    // Set up polling to fetch data every 5 seconds
+    const intervalId = setInterval(fetchData, 5000);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
   }, []);
   
 

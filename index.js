@@ -29,6 +29,11 @@ mongoose.connect("mongodb+srv://Mirudhu:Admin@bucket.uxr7nhr.mongodb.net/Classif
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('Error connecting to MongoDB:', err));
 
+  app.get('/', (req, res) => {
+    res.send('Server is running');
+});
+ 
+
 // File upload route with async processing to prevent bottlenecks
 app.post('/upload', upload.array('files'), async (req, res) => {
   console.log(req.files);
@@ -45,6 +50,7 @@ app.post('/upload', upload.array('files'), async (req, res) => {
         return newFile.save();
       })
     );
+    console.log('Saved files:', savedFiles);
 
     // Step 2: Classify each file asynchronously
     const classifyFile = async (file) => {
@@ -54,14 +60,18 @@ app.post('/upload', upload.array('files'), async (req, res) => {
         contentType: file.format,
       });
 
+      console.log('Classifying file:', file.name, 'with data:', file.data);
+    
       try {
-        const response = await axios.post('http://localhost:5000/classify', formData, {
-          headers: {  'Content-Type': 'multipart/form-data' },
+        // Directly set the Content-Type header for axios to handle the multipart/form-data
+        const response = await axios.post('http://localhost:8000/classify', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
         });
-        return response.data;
+        return response.data.final_classification;
       } catch (err) {
-        console.error(`Error classifying file ${file.name}:`, err);
-        return JSON.stringify({ error: 'Classification failed' });
+        // Improved error logging
+        console.error(`Error classifying file ${file.name}:`, err.response ? err.response.data : err.message);
+        return { error: 'Classification failed' };
       }
     };
 

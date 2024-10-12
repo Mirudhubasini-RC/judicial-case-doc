@@ -1,3 +1,6 @@
 .DS_Store
 myenv/
 node_modules/
+models/dnn_model.h5
+models/mlp_model.pkl
+models/svm_model.pkl
