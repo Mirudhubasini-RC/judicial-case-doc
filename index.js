@@ -52,28 +52,34 @@ app.post('/upload', upload.array('files'), async (req, res) => {
     );
     console.log('Saved files:', savedFiles);
 
-    // Step 2: Classify each file asynchronously
     const classifyFile = async (file) => {
       const formData = new FormData();
       formData.append('file', file.data, {
         filename: file.name,
         contentType: file.format,
       });
-
-      console.log('Classifying file:', file.name, 'with data:', file.data);
     
       try {
-        // Directly set the Content-Type header for axios to handle the multipart/form-data
         const response = await axios.post('http://localhost:8000/classify', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        return response.data.final_classification;
+    
+        let finalClassification = response.data.final_classification;
+        let importantTerms = response.data.important_terms; // Assuming your API returns important terms
+    
+        // Save classification and important terms
+        if (Array.isArray(finalClassification)) {
+          finalClassification = finalClassification.join(', '); // Join array elements with a comma
+        }
+    
+        return { finalClassification, importantTerms }; // Return both
       } catch (err) {
-        // Improved error logging
         console.error(`Error classifying file ${file.name}:`, err.response ? err.response.data : err.message);
         return { error: 'Classification failed' };
       }
     };
+    
+    
 
     // Update classification results in the database
     await Promise.all(savedFiles.map(async (file) => {

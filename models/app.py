@@ -12,6 +12,10 @@ from docx import Document
 import re
 import string
 import os
+from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
+import nltk
+nltk.download('stopwords')
 
 import pandas as pd
 from statistics import mode
@@ -29,13 +33,13 @@ db = client['Classification']
 fs = gridfs.GridFS(db)
 
 # Load the models
-dnn_model = tf.keras.models.load_model('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/dnn_model.h5')
-mlp_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/mlp_model.pkl')
-vectorizer = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/tfidf_vectorizer.pkl')
-word2vec_model = Word2Vec.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/word2vec_model.bin')
-rfc_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/random_forest_classifier.joblib')
-svm_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/svm_model.pkl')
-logreg_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/model.py/logreg_model.pkl')
+# dnn_model = tf.keras.models.load_model('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/dnn_model.h5')
+mlp_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/mlp_model.pkl')
+vectorizer = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/tfidf_vectorizer.pkl')
+word2vec_model = Word2Vec.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/word2vec_model.model')
+rfc_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/random_forest_model.pkl')
+svm_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/svm_model.pkl')
+logreg_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/logreg_model.pkl')
 
 # Define class names
 class_names = {
@@ -146,6 +150,25 @@ def preprocess_file(file_data: bytes, content_type: str) -> np.ndarray:
     combined_vector = combined_vector.reshape(1, -1)
     return combined_vector
 
+def extract_important_terms(text, top_n=10):
+    """
+    This function extracts the top N important terms using TF-IDF.
+    You can replace this with a different method if needed.
+    """
+    tfidf_vect = TfidfVectorizer(max_features=1000)
+    tfidf_matrix = tfidf_vect.fit_transform([text])
+
+    # Get feature names (words)
+    feature_names = np.array(tfidf_vect.get_feature_names_out())
+    # Get the tf-idf scores for the words
+    tfidf_scores = tfidf_matrix.toarray().flatten()
+
+    # Sort words by their scores (importance)
+    sorted_indices = np.argsort(tfidf_scores)[::-1]
+    important_terms = feature_names[sorted_indices[:top_n]]
+
+    return important_terms.tolist()
+
 @app.route('/')
 def home():
     return jsonify({'message': 'Server is running successfully!'}), 200
@@ -168,6 +191,8 @@ def classify():
     file_data = file.read()
     
     try:
+        # Preprocess the file
+        text = convert_to_text(file_data, content_type)
         processed_data = preprocess_file(file_data, content_type)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
@@ -179,20 +204,11 @@ def classify():
     try:
         mlp_prediction = mlp_model.predict(processed_data)[0]
         rf_prediction = rfc_model.predict(processed_data)[0]
-        dnn_prediction = np.argmax(dnn_model.predict(processed_data), axis=1)[0]  # For DNN, argmax gets the class with the highest probability
         svm_prediction = svm_model.predict(processed_data)[0]
         logreg_prediction = logreg_model.predict(processed_data)[0]
 
-        print(f"MLP Prediction: {mlp_prediction}")
-        print(f"Random Forest Prediction: {rf_prediction}")
-        print(f"DNN Prediction: {dnn_prediction}")
-        print(f"SVM Prediction: {svm_prediction}")
-        print(f"Logistic Regression Prediction: {logreg_prediction}")
-
         # Combine all predictions into a list
-        predictions = [mlp_prediction, rf_prediction,logreg_prediction]
-
-        # Perform majority voting (mode of predictions)
+        predictions = [mlp_prediction, rf_prediction, logreg_prediction]
         final_prediction = mode(predictions)
 
     except Exception as e:
@@ -210,15 +226,17 @@ def classify():
         if final_classification == 'Unknown Class':
             print("Could not classify the file based on model predictions.")
     
-    # Return the final class name in the response
+    # Extract important terms for highlighting
+    important_terms = extract_important_terms(text)
+
+    print(f"Important terms extracted: {important_terms}")
+    # Return the final class name and important terms in the response
     result = {
-        'final_classification': final_classification
+        'final_classification': final_classification,
+        'important_terms': important_terms  # New: important terms for highlighting
     }
     
     return jsonify(result)
 
-
-
 if __name__ == '__main__':
     app.run(port=8000, debug=True)
-

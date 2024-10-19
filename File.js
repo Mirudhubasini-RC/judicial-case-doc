@@ -4,7 +4,8 @@ const fileSchema = new mongoose.Schema({
   format: String,
   size: Number,
   data: Buffer,
-  classificationResult: String, // Add this field for storing classification results
+  classificationResult: [String], // Add this field for storing classification results
+  importantTerms: [String]
 });
 
 const File = mongoose.model('File', fileSchema);

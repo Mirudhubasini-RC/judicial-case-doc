@@ -73,3 +73,8 @@
 .view-button:hover {
   background-color: #3A0CA3;
 }
+
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}

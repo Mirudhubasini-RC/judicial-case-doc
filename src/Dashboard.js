@@ -1,40 +1,53 @@
 import React, { useState, useEffect } from 'react';
-import { Pie, Line, Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement, LineElement, PointElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement } from 'chart.js';
+import axios from 'axios';
 import './Dashboard.css';
 
 // Register necessary components for Chart.js
-ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement, LineElement, PointElement);
+ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement);
 
-const Dashboard = ({ files, results, onBack }) => {
+const Dashboard = ({ onBack }) => {
   const [fileData, setFileData] = useState([]);
-  const [classificationResults, setClassificationResults] = useState(results);
+  const [classificationResults, setClassificationResults] = useState([]);
 
   useEffect(() => {
-    // Define the function to fetch data
     const fetchData = () => {
-      fetch('http://localhost:3001/files')
-        .then(response => response.json())
-        .then(data => {
-          setFileData(data); // Set file data
-          
-          // Extract classification results from the fetched data
-          const results = data.map(file => file.classificationResult || 'Not Classified Yet');
-          setClassificationResults(results); // Set the classification results
+      axios.get('http://localhost:3001/files')
+        .then(response => {
+          const data = response.data;
+          setFileData(data);
+
+          const results = data.map(file => {
+            const parsedResult = file.classificationResult ? JSON.parse(file.classificationResult) : 'Not Classified Yet';
+            return parsedResult.finalClassification || 'Not Classified Yet';
+          });
+          setClassificationResults(results);
         })
         .catch(error => console.error('Error fetching files:', error));
     };
 
-    // Fetch data initially
     fetchData();
-
-    // Set up polling to fetch data every 5 seconds
     const intervalId = setInterval(fetchData, 5000);
-
-    // Clean up interval on component unmount
     return () => clearInterval(intervalId);
   }, []);
-  
+
+  const handleClassify = (fileId) => {
+    axios.post(`http://localhost:3001/api/classify/${fileId}`)
+      .then(response => {
+        const { finalClassification } = response.data;
+
+        setClassificationResults(prevResults => {
+          const updatedResults = [...prevResults];
+          const fileIndex = fileData.findIndex(file => file._id === fileId);
+          if (fileIndex !== -1) {
+            updatedResults[fileIndex] = finalClassification;
+          }
+          return updatedResults;
+        });
+      })
+      .catch(error => console.error('Error classifying document:', error));
+  };
 
   const handleViewFile = (fileId) => {
     if (fileId) {
@@ -44,45 +57,39 @@ const Dashboard = ({ files, results, onBack }) => {
     }
   };
 
-  // Example data for charts, replace with actual data
+  // Count occurrences of each case type for the dynamic case type chart
+  const caseTypeCounts = classificationResults.reduce((acc, result) => {
+    const caseTypes = result.split(', ');
+    caseTypes.forEach(type => {
+      if (type !== 'Not Classified Yet') {
+        acc[type] = (acc[type] || 0) + 1;
+      }
+    });
+    return acc;
+  }, {});
+
+  const caseTypeLabels = Object.keys(caseTypeCounts);
+  const caseTypeValues = Object.values(caseTypeCounts);
+
   const caseTypeData = {
-    labels: ['Civil', 'Criminal', 'Other'],
+    labels: caseTypeLabels,
     datasets: [{
-      data: [5, 3, 2],
-      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
-      hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+      data: caseTypeValues,
+      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4A00E0', '#FF007F'],
+      hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#3A0CA3', '#D20B72']
     }]
   };
+
+  // Document statistics for the dynamic bar chart
+  const numProcessed = fileData.length;
+  const numClassified = classificationResults.filter(result => result !== 'Not Classified Yet').length;
 
   const documentStatsData = {
     labels: ['Processed', 'Classified'],
     datasets: [{
-      data: [50, 30],
+      data: [numProcessed, numClassified],
       backgroundColor: ['#4A00E0', '#FF007F'],
       hoverBackgroundColor: ['#3A0CA3', '#D20B72']
-    }]
-  };
-
-  const lineChartData = {
-    labels: ['January', 'February', 'March', 'April', 'May'],
-    datasets: [{
-      label: 'Uploads Over Time',
-      data: [0, 10, 5, 2, 20],
-      borderColor: '#4A00E0',
-      backgroundColor: 'rgba(74, 0, 224, 0.2)',
-      borderWidth: 1,
-      fill: true
-    }]
-  };
-
-  const barChartData = {
-    labels: ['Civil', 'Criminal', 'Other'],
-    datasets: [{
-      label: 'Number of Cases',
-      data: [5, 3, 2],
-      backgroundColor: '#4A00E0',
-      borderColor: '#3A0CA3',
-      borderWidth: 1
     }]
   };
 
@@ -90,36 +97,8 @@ const Dashboard = ({ files, results, onBack }) => {
     <div className="dashboard-container">
       <button onClick={onBack} className="back-button">Back to Upload</button>
       <h1 className="dashboard-title">Dashboard</h1>
-      <div className="dashboard-content">
-        <div className="dashboard-card">
-          <h2>Number of Documents Uploaded</h2>
-          <p>{fileData.length}</p>
-        </div>
-        <div className="dashboard-card">
-          <h2>Case Types</h2>
-          <Pie data={caseTypeData} />
-        </div>
-        <div className="dashboard-card">
-          <h2>Document Statistics</h2>
-          <Bar data={documentStatsData} />
-        </div>
-        <div className="dashboard-card">
-          <h2>Recent Activity Feed</h2>
-          <ul>
-            {fileData.map((file, index) => (
-              <li key={index}>{file.name} - {classificationResults[index]}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="dashboard-card">
-          <h2>Trends Over Time</h2>
-          <Line data={lineChartData} />
-        </div>
-        <div className="dashboard-card">
-          <h2>Top Case Types</h2>
-          <Bar data={barChartData} />
-        </div>
-      </div>
+
+      {/* Classified Documents Table at the Top */}
       <div className="classified-documents-table">
         <h2>Results of the Classified Documents</h2>
         <table>
@@ -151,6 +130,23 @@ const Dashboard = ({ files, results, onBack }) => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Other Dashboard Elements Below */}
+      <div className="dashboard-content">
+        <div className="dashboard-card">
+          <h2>Number of Documents Uploaded</h2>
+          <p>{fileData.length}</p>
+        </div>
+        <div className="dashboard-card">
+          <h2>Case Types</h2>
+          <Pie data={caseTypeData} />
+        </div>
+        <div className="dashboard-card">
+          <h2>Document Statistics</h2>
+          <Bar data={documentStatsData} />
+        </div>
+        {/* Removed Trends Over Time */}
       </div>
     </div>
   );

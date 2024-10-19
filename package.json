@@ -766,6 +766,7 @@
     "terminal-link": "^2.1.1",
     "terser": "^5.31.1",
     "terser-webpack-plugin": "^5.3.10",
+    "tesseract.js": "^5.1.1",
     "test-exclude": "^6.0.0",
     "text-table": "^0.2.0",
     "thenify": "^3.3.1",
