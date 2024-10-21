@@ -1,4 +1,77 @@
 /* Dashboard.css */
+
+.recent-activity-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-family: Arial, sans-serif;
+}
+
+
+.recent-activity-table th,
+.recent-activity-table td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+.recent-activity {
+  margin-top: 20px;
+  font-family: 'Poppins', sans-serif; /* Soft font */
+}
+
+
+.compact-table {
+  width: 60%; /* Small width for a compact look */
+  margin: 0 auto; /* Center the table */
+  border-collapse: collapse;
+  font-size: 0.85rem; /* Slightly smaller font for a compact feel */
+}
+
+
+.compact-table th,
+.compact-table td {
+  border: 1px solid #ddd;
+  padding: 6px 10px; /* Reduced padding for compactness */
+  text-align: center;
+}
+
+
+.compact-table th {
+  background-color: #F0F4FF; /* Light pastel for headers */
+  color: #333; /* Darker text for contrast */
+  font-weight: 600;
+}
+
+
+.compact-table td {
+  background-color: #FDFBFF; /* Light background for table rows */
+  color: #555; /* Softer text color */
+}
+
+
+.even-row {
+  background-color: #F9F9FF; /* Light alternating row color */
+}
+
+
+.odd-row {
+  background-color: #FDFBFF;
+}
+
+
+.compact-table tr:hover {
+  background-color: #E6F7FF; /* Light blue hover effect */
+  cursor: pointer;
+}
+
+
+h2 {
+  text-align: center;
+  color: #4A00E0; /* Header color */
+  font-weight: 500;
+  font-size: 1.1rem; /* Small header size */
+}
+
 .dashboard-container {
   padding: 20px;
   font-family: Arial, sans-serif;
@@ -75,6 +148,20 @@
 }
 
 .highlight {
+  background-color: yellow;
+  font-weight: bold;
+}
+
+.document-viewer {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  height: 400px;
+  overflow-y: scroll;
+  white-space: pre-wrap;
+}
+
+mark {
   background-color: yellow;
   font-weight: bold;
 }
