@@ -169,16 +169,40 @@ def classify():
         else:
             final_classification = ', '.join(multi_class_labels)
 
+        # Get important words based on classification
+        highlighted_words = identify_important_words(text, avg_probs)
+
     except Exception as e:
         print(f"Error in prediction: {e}")
         return jsonify({'error': 'Prediction failed'}), 500
     
-    # Return the final classification in the response
+    # Return the final classification and highlighted words in the response
     result = {
-        'final_classification': final_classification
+        'final_classification': final_classification,
+        'highlighted_words': highlighted_words
     }
     
     return jsonify(result)
+
+def identify_important_words(text: str, avg_probs: np.ndarray) -> dict:
+    """
+    Identify and return words to highlight based on classification probabilities.
+    This function can be customized based on your classification logic.
+    """
+    # Example logic for identifying important words (modify as needed)
+    words = text.split()
+    important_words = {}
+
+    # For simplicity, consider the top words in the input text
+    # (You can also use your model's features or gradients for better accuracy)
+    for i, word in enumerate(words):
+        # Highlight words that contribute to the classification (e.g., based on some logic)
+        if avg_probs[i] >= 0.3:  # Adjust logic as necessary
+            important_words[word] = i
+    
+    return important_words
+
+
 
 if __name__ == '__main__':
     app.run(port=9000, debug=True)
