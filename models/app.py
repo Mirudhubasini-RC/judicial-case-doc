@@ -1,10 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from pymongo import MongoClient
-import gridfs
 import joblib
 import numpy as np
 import tensorflow as tf
+from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.models import Word2Vec
 from io import BytesIO
 import PyPDF2
@@ -12,34 +11,20 @@ from docx import Document
 import re
 import string
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
+import pandas as pd
 import nltk
 nltk.download('stopwords')
-
-import pandas as pd
-from statistics import mode
-
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
 
 app = Flask(__name__)
 CORS(app, resources={r"/classify": {"origins": "*"}})
 
-
-# MongoDB setup
-client = MongoClient("mongodb+srv://Mirudhu:Admin@bucket.uxr7nhr.mongodb.net/Classification")
-db = client['Classification']
-fs = gridfs.GridFS(db)
-
-# Load the models
-# dnn_model = tf.keras.models.load_model('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/dnn_model.h5')
+# Load models
+dnn_model = tf.keras.models.load_model('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/dnn_model.h5')
 mlp_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/mlp_model.pkl')
 vectorizer = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/tfidf_vectorizer.pkl')
 word2vec_model = Word2Vec.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/word2vec_model.model')
-rfc_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/random_forest_model.pkl')
-svm_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/svm_model.pkl')
-logreg_model = joblib.load('/Users/mirudhubasinirc/Documents/JudicialCaseDoc/judicial-case-doc/models/logreg_model.pkl')
 
 # Define class names
 class_names = {
@@ -58,21 +43,8 @@ class_names = {
     36: 'Sales Tax And Vat', 37: 'Service Law', 38: 'Succession Laws', 
     39: 'Tenancy Laws', 40: 'Transport Law'
 }
-LABELS_CSV_PATH = '/Users/mirudhubasinirc/Documents/Interview_Mapping.csv'
-def get(file_name):
-    
-    file_name_without_extension = os.path.splitext(file_name)[0]
-    
-    df = pd.read_csv(LABELS_CSV_PATH)
 
-    label_row = df[df['Judgements'] == file_name_without_extension]
-
-    if label_row.empty:
-        return None 
-    else:
-        return label_row['Area.of.Law'].values[0]
-
-# Text conversion functions
+# Convert document to text
 def convert_to_text(file_data: bytes, content_type: str) -> str:
     if 'pdf' in content_type:
         return convert_pdf_to_text(file_data)
@@ -99,7 +71,7 @@ def convert_doc_to_text(file_data: bytes) -> str:
             text += paragraph.text + '\n'
     return text
 
-# Text preprocessing function
+# Text preprocessing
 def clean_text(text: str) -> str:
     stop = set(stopwords.words('english'))
     punct = string.punctuation
@@ -107,7 +79,7 @@ def clean_text(text: str) -> str:
 
     # Remove links
     text = re.sub(r'http(s)?:\/\/\S*', '', text)
-    # Remove newlines and normalization
+    # Remove newlines and normalize
     text = ' '.join([elem.replace('\n', ' ') for elem in text])
     text = ' '.join([elem for elem in text.lower().split() if elem not in stop])
     # Remove punctuation and digits
@@ -140,9 +112,6 @@ def preprocess_file(file_data: bytes, content_type: str) -> np.ndarray:
     # Convert using Word2Vec
     word2vec_vector = get_word2vec_vector(tokens, word2vec_model)
     
-    # Reshape word2vec_vector to 2D
-    word2vec_vector = word2vec_vector.reshape(1, -1)
-    
     # Combine both vectors
     combined_vector = np.hstack((tfidf_vector, word2vec_vector))
     
@@ -150,29 +119,9 @@ def preprocess_file(file_data: bytes, content_type: str) -> np.ndarray:
     combined_vector = combined_vector.reshape(1, -1)
     return combined_vector
 
-def extract_important_terms(text, top_n=10):
-    """
-    This function extracts the top N important terms using TF-IDF.
-    You can replace this with a different method if needed.
-    """
-    tfidf_vect = TfidfVectorizer(max_features=1000)
-    tfidf_matrix = tfidf_vect.fit_transform([text])
-
-    # Get feature names (words)
-    feature_names = np.array(tfidf_vect.get_feature_names_out())
-    # Get the tf-idf scores for the words
-    tfidf_scores = tfidf_matrix.toarray().flatten()
-
-    # Sort words by their scores (importance)
-    sorted_indices = np.argsort(tfidf_scores)[::-1]
-    important_terms = feature_names[sorted_indices[:top_n]]
-
-    return important_terms.tolist()
-
 @app.route('/')
 def home():
     return jsonify({'message': 'Server is running successfully!'}), 200
-
 
 @app.route('/classify', methods=['POST'])
 def classify():
@@ -200,43 +149,36 @@ def classify():
     # Ensure processed_data is 2D
     processed_data = processed_data.reshape(1, -1)
 
-    # Get predictions from each model
+    # Get probabilities from DNN and MLP
     try:
-        mlp_prediction = mlp_model.predict(processed_data)[0]
-        rf_prediction = rfc_model.predict(processed_data)[0]
-        svm_prediction = svm_model.predict(processed_data)[0]
-        logreg_prediction = logreg_model.predict(processed_data)[0]
+        dnn_probs = dnn_model.predict(processed_data)[0]
+        mlp_probs = mlp_model.predict_proba(processed_data)[0]
 
-        # Combine all predictions into a list
-        predictions = [mlp_prediction, rf_prediction, logreg_prediction]
-        final_prediction = mode(predictions)
+        # Combine the probabilities from both models (average)
+        avg_probs = (dnn_probs + mlp_probs) / 2
+        
+        # Set a threshold for multi-class classification
+        threshold = 0.3
+        
+        # Identify classes that exceed the threshold
+        multi_class_labels = [class_names[i] for i, prob in enumerate(avg_probs) if prob >= threshold]
+        
+        if not multi_class_labels:
+            # If no class exceeds the threshold, return the class with the highest probability
+            final_classification = class_names[np.argmax(avg_probs)]
+        else:
+            final_classification = ', '.join(multi_class_labels)
 
     except Exception as e:
         print(f"Error in prediction: {e}")
         return jsonify({'error': 'Prediction failed'}), 500
     
-    # Check if the file is present in the CSV
-    pred = get(file.filename)
-
-    # If file is found in the CSV, use that; otherwise, use the predicted class
-    if pred:
-        final_classification = pred
-    else:
-        final_classification = class_names.get(final_prediction, 'Unknown Class')
-        if final_classification == 'Unknown Class':
-            print("Could not classify the file based on model predictions.")
-    
-    # Extract important terms for highlighting
-    important_terms = extract_important_terms(text)
-
-    print(f"Important terms extracted: {important_terms}")
-    # Return the final class name and important terms in the response
+    # Return the final classification in the response
     result = {
-        'final_classification': final_classification,
-        'important_terms': important_terms  # New: important terms for highlighting
+        'final_classification': final_classification
     }
     
     return jsonify(result)
 
 if __name__ == '__main__':
-    app.run(port=8000, debug=True)
+    app.run(port=9000, debug=True)

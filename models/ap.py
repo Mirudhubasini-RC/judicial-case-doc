@@ -95,15 +95,25 @@ keyword_map = load_keyword_map()
 # Classify document based on keywords
 def classify_document_by_keywords(text, keyword_map):
     text = text.lower()  # Convert document text to lowercase for case-insensitive matching
+    print(f"Text to classify: {text}") 
     
     # Initialize a dictionary to store match counts for each category
     category_match_counts = {category: 0 for category in keyword_map.keys()}
     
+    match_found = False
     # Check each word against all categories' keywords
     for category, keywords in keyword_map.items():
         for keyword in keywords:
+            print(f"Searching for keyword: {keyword.lower()}")
             if keyword.lower() in text:
+                print(f"Matched keyword: {keyword} in category: {category}")
                 category_match_counts[category] += 1
+                match_found = True  # A match is found, set this to True
+    
+    # If no match is found, print "Falls under no class"
+    if not match_found:
+        print("Falls under no class")
+        return "No classification"
     
     # Get the category with the highest match count
     sorted_categories = sorted(category_match_counts.items(), key=lambda x: x[1], reverse=True)
@@ -112,7 +122,7 @@ def classify_document_by_keywords(text, keyword_map):
     
     if len(sorted_categories) > 1:
         second_category, second_count = sorted_categories[1]
-        if abs(top_count - second_count) <= 10:
+        if abs(top_count - second_count) <= 5:
             return f'{top_category}, {second_category}'
     
     return top_category
