@@ -103,7 +103,23 @@ const Dashboard = ({ onBack }) => {
           const newWindow = window.open("", "_blank");
           newWindow.document.write(`
             <html>
-              <head><title>File View</title></head>
+              <head><title>File View</title>
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  padding: 20px;
+                  max-width: 1500px; /* Set a max-width */
+                  overflow-wrap: break-word; /* Break long words */
+                }
+                pre {
+                  white-space: pre-wrap; /* Preserve whitespace and wrap long lines */
+                  word-wrap: break-word; /* Break long words to fit */
+                  background: #f4f4f4;
+                  padding: 10px;
+                  border-radius: 5px;
+                }
+              </style>
+              </head>
               <body>
                 <h1>File Content:</h1>
                 <pre>${highlightedContent}</pre>
