@@ -35,43 +35,25 @@ Virtual Environment (Python)
 MongoDB Connection String
 Frontend Setup
 Clone the Repository:
-
-bash
-Copy code
 git clone <repository-url>
 cd Judicial-Case-Classifier/Frontend/my-chat-bot
+
 Install Dependencies:
-
-bash
-Copy code
 npm install
-Run the React App:
 
-bash
-Copy code
+Run the React App:
 npm start
+
 Backend Setup
 Navigate to the Backend Directory:
-
-bash
-Copy code
 cd Judicial-Case-Classifier/Backend
 Set up Python Virtual Environment:
-
-bash
-Copy code
 python3 -m venv venv
 source venv/bin/activate  # For macOS/Linux
 venv\Scripts\activate     # For Windows
 Install Python Dependencies:
-
-bash
-Copy code
 pip install -r requirements.txt
 Run the Flask Server:
-
-bash
-Copy code
 python app.py
 Database Setup
 Create a MongoDB Atlas Account at https://www.mongodb.com/atlas.
@@ -83,17 +65,10 @@ Update the Connection String in your environment:
 Replace <username>, <password>, and <cluster-url> in your connection string.
 
 Example:
-
-perl
-Copy code
 mongodb+srv://Mirudhu:Admin@bucket.uxr7nhr.mongodb.net/Classification
 Ensure the backend has access to MongoDB Atlas by whitelisting your IP in the MongoDB Atlas Network Access settings.
-
 Run the Server
 Start the Node.js server:
-
-bash
-Copy code
 node server.js
 Both servers should be running:
 
